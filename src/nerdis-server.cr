@@ -8,9 +8,6 @@ module Nerdis
         puts "Server Started"
         loop do
           client = server.accept
-          puts "Accepted Requrest"
-
-          client << "+Connected To Server\r\n"
           spawn handle_client(client)
         end
       rescue ex
@@ -21,7 +18,7 @@ module Nerdis
     def handle_client(client)
       begin
         loop do
-          RespParser.new.parse(client)
+          RespParser.new(client).parse
         end
       rescue ex
         ex
