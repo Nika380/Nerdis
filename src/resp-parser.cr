@@ -42,8 +42,12 @@ module Nerdis
         handle_echo(value)
       when "ping"
         handle_ping
+      when "set"
+        handle_set_command(value)
+      when "get"
+        handle_get_command(value)
       else
-         return_simple_error("Error")
+        return_simple_error("Error")
       end
     end
   end
