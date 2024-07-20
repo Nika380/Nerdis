@@ -1,12 +1,12 @@
-name: redis-crystal-2
+name: nerdis
 version: 0.1.0
 
 authors:
   - nika380 <nikanatroshvili7@gmail.com>
 
 targets:
-  redis-crystal-2:
-    main: src/redis-crystal-2.cr
+  nerdis:
+    main: src/nerdis.cr
 
 crystal: '>= 1.12.2'
 
