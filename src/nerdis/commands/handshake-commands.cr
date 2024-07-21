@@ -3,7 +3,11 @@ require "./resp-commands"
 module Nerdis
   module HandshakeCommands
     include RespCommands
-    def handle_replconf
+
+    def handle_replconf(command, host)
+      if command.includes?("listening-port")
+        @connected_slaves << TCPSocket.new(host, command[2].to_i)
+      end
       return_simple_string("OK")
     end
 
@@ -15,7 +19,7 @@ module Nerdis
       begin
         messages = ["REPLCONF listening-port #{port_number}", "REPLCONF capa psync2"]
         (0..1).each do |i|
-            send_message(client, return_array_strings(messages[i]))
+          send_message(client, return_array_strings(messages[i]))
           response = read_value(client)
           if response != "+OK"
             raise "Error On Replconf #{i + 1}"
@@ -27,7 +31,7 @@ module Nerdis
       end
     end
 
-    def start_replication_handshake(ms_host, ms_port)
+    def start_replication_handshake(ms_host, ms_port, port)
       replica_client : IO? = nil
       begin
         replica_client = TCPSocket.new(ms_host, ms_port)
@@ -36,7 +40,7 @@ module Nerdis
         if response != "+PONG"
           raise "Handshake Did Not Work"
         end
-        send_replconf_handshake(replica_client, ms_port)
+        send_replconf_handshake(replica_client, port)
         send_psync_packets(replica_client)
       rescue ex
         "Error during handshake #{ex.message}"
@@ -51,24 +55,23 @@ module Nerdis
     def send_psync_packets(client)
       begin
         send_message(client, return_array_strings("PSYNC ? -1"))
-          response = read_value(client)
-          if !response
-            raise "Psync Failed"
-          end
+        response = read_value(client)
+        if !response
+          raise "Psync Failed"
+        end
       rescue ex
         raise "Error #{ex}"
       end
     end
 
     def generate_rdb_file(client)
-        puts "Generating RDB File"
-          rdb_file_contents = Base64.decode("UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==")
-          header = "$#{rdb_file_contents.size}\r\n".to_slice
-          puts "Response: #{header}#{rdb_file_contents}"
-          client.write(header)
-          client.write(rdb_file_contents)
-          client.close
-          puts "RDB Values Sent"
-        end
+      puts "Generating RDB File"
+      rdb_file_contents = Base64.decode("UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==")
+      header = "$#{rdb_file_contents.size}\r\n".to_slice
+      client.write(header)
+      client.write(rdb_file_contents)
+      client.close
+      puts "RDB Values Sent"
+    end
   end
 end

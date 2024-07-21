@@ -1,9 +1,11 @@
 module Nerdis
   module Commands
     include HandshakeCommands
+    include ReplicationCommands
     @client : IO
+    @connected_slaves : Array(TCPSocket) = [] of TCPSocket
 
-    def initialize(client : IO)
+    def initialize(client : IO, @connected_slaves : Array(TCPSocket))
       @client = client
     end
 
@@ -45,13 +47,13 @@ module Nerdis
       when "ping"
         handle_ping()
       when "set"
-        handle_set_command(value)
+        handle_set_command(value, data)
       when "get"
         handle_get_command(value)
       when "info"
         handle_info_command(value, data)
       when "replconf"
-        handle_replconf()
+        handle_replconf(value, data[:host])
       else
         return_simple_error("Error")
       end

@@ -5,17 +5,17 @@ require "./nerdis/commands/handshake-commands"
 module Nerdis
   class NerdisServer
     include HandshakeCommands
-    @master_port = 6379
-    @master_host = "0.0.0.0"
-    @port_number = 6379
-    @host_address = "0.0.0.0"
-    @role = "master"
-    @master_replid = Random.new.hex(40)
-    @connected_slaves = 0
-    @master_repl_offset = 0
+    @master_port : Int32 = 6379
+    @master_host : String = "0.0.0.0"
+    @port_number : Int32 = 6379
+    @host_address : String = "0.0.0.0"
+    @role : String = "master"
+    @master_replid : String = Random.new.hex(40)
+    @master_repl_offset : Int32 = 0
+    @connected_slaves : Array(TCPSocket) = [] of TCPSocket
 
     def start
-      packed_data = {ms_port: @master_port, ms_host: @master_host, port: @port_number, host: @host_address, role: @role, ms_replid: @master_replid, ms_offset: @master_repl_offset}
+      packed_data = {ms_port: @master_port, ms_host: @master_host, port: @port_number, host: @host_address, role: @role, ms_replid: @master_replid, ms_offset: @master_repl_offset, replica_list: @connected_slaves}
       begin
         if ARGV.size > 0
           parse_args
@@ -23,7 +23,7 @@ module Nerdis
         server = TCPServer.new(@host_address, @port_number)
         puts "Server Started On Port #{@port_number}"
         if @role == "slave"
-          start_replication_handshake(@master_host, @master_port)
+          start_replication_handshake(@master_host, @master_port, @port_number)
         end
         loop do
           client = server.accept
@@ -37,7 +37,7 @@ module Nerdis
     def handle_client(client, data)
       begin
         loop do
-          RespParser.new(client).parse(data)
+          RespParser.new(client, @connected_slaves).parse(data)
         end
       rescue ex
         ex
